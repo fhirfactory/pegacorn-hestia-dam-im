@@ -23,9 +23,9 @@ package net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.petasos.ser
 
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.fhirfactory.pegacorn.core.interfaces.auditing.PetasosMediaServiceAgentInterface;
-import net.fhirfactory.pegacorn.core.interfaces.auditing.PetasosMediaServiceBrokerInterface;
-import net.fhirfactory.pegacorn.core.interfaces.auditing.PetasosMediaServiceClientWriterInterface;
+import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceAgentInterface;
+import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceBrokerInterface;
+import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientWriterInterface;
 import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterface;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.datagrid.AsynchronousWriterMediaCache;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.HestiaDMHTTPClient;
@@ -187,17 +187,6 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     // Helper Functions
     //
 
-    private boolean useHadoopDMService() {
-        String parameterValue = getProcessingPlant().getMeAsASoftwareComponent().getOtherConfigurationParameter("IM_TO_DM_TECHNOLOGY");
-        if (parameterValue != null) {
-            if (parameterValue.equalsIgnoreCase("jgroups")) {
-                return (true);
-            }
-        } else {
-            return (false);
-        }
-        return (false);
-    }
 
     //
     // Asynchronous Writer Daemon
@@ -260,4 +249,5 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
         Boolean success = logMedia(getProcessingPlant().getSubsystemParticipantName(), media);
         return(success);
     }
+
 }

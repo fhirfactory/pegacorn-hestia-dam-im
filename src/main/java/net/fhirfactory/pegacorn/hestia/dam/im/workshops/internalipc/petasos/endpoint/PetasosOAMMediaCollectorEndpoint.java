@@ -23,8 +23,8 @@ package net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.petasos.end
 
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import net.fhirfactory.pegacorn.core.interfaces.auditing.PetasosMediaServiceClientWriterInterface;
-import net.fhirfactory.pegacorn.core.interfaces.auditing.PetasosMediaServiceHandlerInterface;
+import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientWriterInterface;
+import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceHandlerInterface;
 import net.fhirfactory.pegacorn.core.interfaces.capabilities.CapabilityFulfillmentInterface;
 import net.fhirfactory.pegacorn.core.interfaces.capabilities.CapabilityProviderNameServiceInterface;
 import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterface;
