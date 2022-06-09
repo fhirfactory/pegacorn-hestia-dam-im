@@ -21,23 +21,29 @@
  */
 package net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.petasos.services;
 
-import ca.uhn.fhir.rest.api.MethodOutcome;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceAgentInterface;
-import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceBrokerInterface;
-import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientWriterInterface;
-import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterface;
-import net.fhirfactory.pegacorn.hestia.dam.im.workshops.datagrid.AsynchronousWriterMediaCache;
-import net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.HestiaDMHTTPClient;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+
 import org.hl7.fhir.r4.model.Media;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import ca.uhn.fhir.rest.api.MethodOutcome;
+import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceAgentInterface;
+import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceBrokerInterface;
+import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientWriterInterface;
+import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterface;
+import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantRoleSupportInterface;
+import net.fhirfactory.pegacorn.hestia.dam.im.workshops.datagrid.AsynchronousWriterMediaCache;
+import nhet.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.HestiaDMHTTPClient;
 
 @ApplicationScoped
 public class PetasosMediaPersistenceService implements PetasosMediaServiceClientWriterInterface,
@@ -154,6 +160,15 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     //
     // Local Media Broker Services
     //
+    
+    public SecretKey createSecretKey() {
+    	return KeyGenerator.getInstance("AES").generateKey();
+    }
+    
+    public String generateFilename(Media media) {
+    	//TODO KS work out which parts of the algorithm need to be saved
+    	return null;
+    }
 
     @Override
     public Boolean logMedia(String serviceProviderName, Media media) {
