@@ -7,7 +7,7 @@ import javax.crypto.SecretKey;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import com.ibm.fhir.model.resource.Media;
+import org.hl7.fhir.r4.model.Media;
 
 class PetasosMediaPersistenceServiceTest {
 
@@ -15,22 +15,29 @@ class PetasosMediaPersistenceServiceTest {
 	void generateFilename() {
 		PetasosMediaPersistenceService service = new PetasosMediaPersistenceService();
 		Media media = getDefaultMedia();
-		String path = service.generateFilename(null);
+		String path = service.generateFilename(media);
 		Assertions.assertNotNull(path);
 		Assertions.assertNotEquals("", path);	
+		System.out.println(path);
 	}
 	
+
+
 	@Test
 	void generateSecretKey() {
 		PetasosMediaPersistenceService service = new PetasosMediaPersistenceService();
 		SecretKey key = service.createSecretKey();
 		Assertions.assertNotNull(key);
+		System.out.println(key);
 		
 	}
 
 	//TODO KS - flesh out builder with default values
 	private Media getDefaultMedia() {
-		Media media = Media.builder().build();		
+		// TODO Auto-generated method stub
+		Media media = new Media();
+		String id = "123id";
+		media.setId(id);
 		return media;
 	}
 }

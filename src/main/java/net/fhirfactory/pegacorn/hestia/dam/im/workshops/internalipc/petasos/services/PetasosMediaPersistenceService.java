@@ -21,6 +21,8 @@
  */
 package net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.petasos.services;
 
+import java.security.NoSuchAlgorithmException;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -35,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceAgentInterface;
@@ -43,7 +46,7 @@ import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientW
 import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterface;
 import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantRoleSupportInterface;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.datagrid.AsynchronousWriterMediaCache;
-import nhet.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.HestiaDMHTTPClient;
+import net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.HestiaDMHTTPClient;
 
 @ApplicationScoped
 public class PetasosMediaPersistenceService implements PetasosMediaServiceClientWriterInterface,
@@ -157,19 +160,35 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
         return (outcome);
     }
 
+    @VisibleForTesting
+    SecretKey createSecretKey() {
+    	try {
+			return KeyGenerator.getInstance("AES").generateKey();
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+		}
+    	return null;
+    }
+    @VisibleForTesting
+    String generateFilename(Media media) {
+    	Calendar c = Calendar.getInstance();
+    	StringBuilder sb = new StringBuilder();
+    	//Set the folder structure based on
+    	sb.append("/");
+    	sb.append(c.get(Calendar.YEAR));
+    	sb.append("/");
+    	sb.append(c.get(Calendar.MONTH) + 1);
+    	sb.append("/");
+    	sb.append(c.get(Calendar.DATE));
+    	sb.append("/");
+    	sb.append(media.getId());  	//TODO KS work out which parts of the algorithm need to be saved
+
+    	return sb.toString();
+    }
+
     //
     // Local Media Broker Services
     //
-    
-    public SecretKey createSecretKey() {
-    	return KeyGenerator.getInstance("AES").generateKey();
-    }
-    
-    public String generateFilename(Media media) {
-    	//TODO KS work out which parts of the algorithm need to be saved
-    	return null;
-    }
-
     @Override
     public Boolean logMedia(String serviceProviderName, Media media) {
         getLogger().debug(".logMedia(): Entry, media->{}", media);
