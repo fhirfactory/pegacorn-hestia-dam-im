@@ -32,6 +32,7 @@ import javax.crypto.SecretKey;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.Media;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,7 @@ import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterfac
 import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantRoleSupportInterface;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.datagrid.AsynchronousWriterMediaCache;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.HestiaDMHTTPClient;
+import net.fhirfactory.pegacorn.internals.fhir.r4.resources.media.factories.MediaEncryptionExtensionFactory;
 
 @ApplicationScoped
 public class PetasosMediaPersistenceService implements PetasosMediaServiceClientWriterInterface,
@@ -69,6 +71,9 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
 
     @Inject
     private AsynchronousWriterMediaCache mediaCache;
+    
+    @Inject
+    MediaEncryptionExtensionFactory encryptionExtension;
 
     //
     // Constructor(s)
@@ -113,19 +118,6 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     // Global Media Services
     //
 
-
-    @Override
-    public MethodOutcome writeMediaJSONStringSynchronously(String mediaJSONString) {
-        getLogger().debug(".writeMediaJSONStringSynchronously(): Entry, media->{}", mediaJSONString);
-        MethodOutcome methodOutcome;
-
-        synchronized (getWriterLock()) {
-            methodOutcome = getHestiaDMHTTPClient().writeMedia(mediaJSONString);
-        }
-        getLogger().debug(".writeMediaJSONStringSynchronously(): Exit, methodOutcome->{}", methodOutcome);
-        return(methodOutcome);
-    }
-
     @Override
     public MethodOutcome writeMediaAsynchronously(Media media) {
         getLogger().debug(".writeMediaAsynchronously(): Entry, media->{}", media);
@@ -151,9 +143,27 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
         MethodOutcome outcome = null;
         if(media != null) {
             getLogger().debug(".writeMedia(): Media is not -null-, writing!");
-            synchronized (getWriterLock()) {
-                getLogger().debug(".writeMedia(): Got Writing Semaphore, writing!");
-                outcome = getHestiaDMHTTPClient().writeMedia(media);
+
+          //1. generate filename
+            String filename = generateFilename(media);
+          //2. generate secret key
+            SecretKey key = createSecretKey();
+          //TODO 3. call media persistence
+            outcome = new MethodOutcome();
+            outcome.setCreated(true);
+            //4. if outcome = true
+            if(outcome.getCreated()) {
+            //   a) update media to have the file URL and secretKey
+            	Attachment a = media.getContent();
+            	a.setUrl("file://data/media" + filename); //TODO is this right?
+            	a.setData(null);
+            	encryptionExtension.injectSecretKey(a, key);
+            
+            //	 b) write the modified media to the JPA server
+	            synchronized (getWriterLock()) {
+	                getLogger().debug(".writeMedia(): Got Writing Semaphore, writing!");
+	                outcome = getHestiaDMHTTPClient().writeMedia(media);
+	            }
             }
         }
         getLogger().debug(".writeMedia(): Exit, media->{}", media);
@@ -173,7 +183,8 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     String generateFilename(Media media) {
     	Calendar c = Calendar.getInstance();
     	StringBuilder sb = new StringBuilder();
-    	//Set the folder structure based on
+    	//Set the folder structure based on year month and day
+    	//XXX KS change this to use the created date on the media object maybe?
     	sb.append("/");
     	sb.append(c.get(Calendar.YEAR));
     	sb.append("/");
