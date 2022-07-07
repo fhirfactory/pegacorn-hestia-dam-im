@@ -45,23 +45,18 @@ import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceAgentIn
 import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceBrokerInterface;
 import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientWriterInterface;
 import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterface;
-import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantRoleSupportInterface;
+import net.fhirfactory.pegacorn.hestia.dam.im.cipher.EncryptedByteArrayStorage;
+import net.fhirfactory.pegacorn.hestia.dam.im.cipher.FileEncrypterDecrypter;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.datagrid.AsynchronousWriterMediaCache;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.HestiaDMHTTPClient;
 import net.fhirfactory.pegacorn.internals.fhir.r4.resources.media.factories.MediaEncryptionExtensionFactory;
 
 @ApplicationScoped
-public class PetasosMediaPersistenceService implements PetasosMediaServiceClientWriterInterface,
-        PetasosMediaServiceBrokerInterface, PetasosMediaServiceAgentInterface {
+public class PetasosMediaPersistenceService implements PetasosMediaServiceClientWriterInterface {
     private static final Logger LOG = LoggerFactory.getLogger(PetasosMediaPersistenceService.class);
 
     private ObjectMapper jsonMapper;
-
-    private boolean stillRunning;
     private Object writerLock;
-
-    private Long ASYNC_MEDIA_WRITER_STARTUP_DELAY = 60000L;
-    private Long ASYNC_MEDIA_WRITER_CHECK_PERIOD = 10000L;
 
     @Inject
     private ProcessingPlantInterface processingPlant;
@@ -74,6 +69,9 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     
     @Inject
     MediaEncryptionExtensionFactory encryptionExtension;
+    
+    @Inject
+    EncryptedByteArrayStorage storageInterface;
 
     //
     // Constructor(s)
@@ -81,9 +79,7 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
 
     public PetasosMediaPersistenceService() {
         jsonMapper = new ObjectMapper();
-        stillRunning = false;
         writerLock = new Object();
-        scheduleAsynchronousMediaWriterDaemon();
     }
 
     //
@@ -141,35 +137,58 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     public MethodOutcome writeMedia(Media media) {
         getLogger().debug(".writeMedia(): Entry, media->{}", media);
         MethodOutcome outcome = null;
-        if(media != null) {
-            getLogger().debug(".writeMedia(): Media is not -null-, writing!");
-
+        //XXX KS if media has URL to begin with, should it at least be saved?
+        if(media != null && media.getContent() != null && media.getContent().getData() != null) {
           //1. generate filename
             String filename = generateFilename(media);
           //2. generate secret key
             SecretKey key = createSecretKey();
-          //TODO 3. call media persistence
-            outcome = new MethodOutcome();
-            outcome.setCreated(true);
+          //3. call media persistence
             //4. if outcome = true
+            outcome = storageInterface.encryptAndSave(key, filename, media.getContent().getData());
             if(outcome.getCreated()) {
             //   a) update media to have the file URL and secretKey
             	Attachment a = media.getContent();
-            	a.setUrl("file://data/media" + filename); //TODO is this right?
+            	a.setUrl(filename);
             	a.setData(null);
             	encryptionExtension.injectSecretKey(a, key);
-            
+
             //	 b) write the modified media to the JPA server
 	            synchronized (getWriterLock()) {
-	                getLogger().debug(".writeMedia(): Got Writing Semaphore, writing!");
+//	                getLogger().warn(".writeMedia(): Got Writing Semaphore, writing!");
 	                outcome = getHestiaDMHTTPClient().writeMedia(media);
 	            }
             }
+        } else {
+            getLogger().warn(".writeMedia(): Media isn't properly formed, not writing!");
         }
         getLogger().debug(".writeMedia(): Exit, media->{}", media);
         return (outcome);
     }
+    
 
+	public Media readMedia(Media media) {
+		getLogger().debug(".readMedia() entry media->{}", media);
+		if(media == null || media.getContent() == null || !media.getContent().hasExtension()) {
+			getLogger().warn("readMedia() failed to read media because of insufficient data passed to method. media->{}", media);
+		}
+		SecretKey key = encryptionExtension.extractSecretKey(media.getContent());
+		String fileName = media.getContent().getUrl();
+		getLogger().debug("attempting to retrieveObject with the following: key ->{}, fileName ->{}", key.getEncoded(), fileName);
+		byte[] data = storageInterface.loadAndDecrypt(key, fileName);
+		if(data == null) {
+			getLogger().warn(".readMedia() failed to retrieve data.");
+		} else {
+			media.getContent().setData(data);
+		}
+		getLogger().debug(".readMedia() exit.");
+
+		return media;
+	}
+
+    //
+    // Helper Functions
+    //
     @VisibleForTesting
     SecretKey createSecretKey() {
     	try {
@@ -179,6 +198,7 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
 		}
     	return null;
     }
+    
     @VisibleForTesting
     String generateFilename(Media media) {
     	Calendar c = Calendar.getInstance();
@@ -192,107 +212,8 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     	sb.append("/");
     	sb.append(c.get(Calendar.DATE));
     	sb.append("/");
-    	sb.append(media.getId());  	//TODO KS work out which parts of the algorithm need to be saved
-
+    	sb.append(media.getId());  	//XXX KS reconsider file name
+    	sb.append(".data"); 		//XXX KS reconsider extension
     	return sb.toString();
     }
-
-    //
-    // Local Media Broker Services
-    //
-    @Override
-    public Boolean logMedia(String serviceProviderName, Media media) {
-        getLogger().debug(".logMedia(): Entry, media->{}", media);
-        MethodOutcome outcome = writeMedia(media);
-        Boolean success = false;
-        if(outcome != null){
-            success = outcome.getCreated();
-        }
-        getLogger().debug(".logMedia(): Exit, success->{}", success);
-        return(success);
-    }
-
-    @Override
-    public Boolean logMedia(String serviceProviderName, List<Media> mediaList) {
-        getLogger().debug(".logMedia(): Entry, media->{}", mediaList);
-        Boolean success = false;
-        if(mediaList != null){
-            if(!mediaList.isEmpty()){
-                for(Media currentMedia: mediaList){
-                    getMediaCache().addMedia(currentMedia);
-                }
-            }
-        }
-        success = true;
-        getLogger().debug(".logMedia(): Exit, success->{}", success);
-        return(success);
-    }
-
-    //
-    // Helper Functions
-    //
-
-
-    //
-    // Asynchronous Writer Daemon
-    //
-
-    //
-    // Scheduler
-
-    private void scheduleAsynchronousMediaWriterDaemon() {
-        getLogger().debug(".scheduleAsynchronousMediaWriterDaemon(): Entry");
-        TimerTask asynchronousMediaWriterDaemon = new TimerTask() {
-            public void run() {
-                getLogger().debug(".asynchronousMediaWriterDaemon(): Entry");
-                asynchronousMediaWriterTask();
-                getLogger().debug(".asynchronousMediaWriterDaemon(): Exit");
-            }
-        };
-        Timer timer = new Timer("AsynchronousMediaTimer");
-        timer.schedule(asynchronousMediaWriterDaemon, ASYNC_MEDIA_WRITER_STARTUP_DELAY, ASYNC_MEDIA_WRITER_CHECK_PERIOD);
-        getLogger().debug(".scheduleAsynchronousMediaWriterDaemon(): Exit");
-    }
-
-    //
-    // Task
-
-    private void asynchronousMediaWriterTask(){
-        getLogger().debug(".notificationForwarder(): Entry");
-        stillRunning = true;
-
-        while(getMediaCache().hasEntries()) {
-            getLogger().trace(".notificationForwarder(): Entry");
-            Media currentMedia = getMediaCache().peekMedia();
-            MethodOutcome outcome = null;
-            synchronized (getWriterLock()) {
-                outcome = hestiaDMHTTPClient.writeMedia(currentMedia);
-            }
-            boolean success = false;
-            if(outcome != null) {
-                if (outcome.getCreated()) {
-                    getMediaCache().pollMedia();
-                    success = true;
-                }
-            }
-            if(!success){
-                getLogger().warn(".asynchronousMediaWriterTask(): Failed to write Media!");
-                break;
-            }
-        }
-        stillRunning = false;
-        getLogger().debug(".notificationForwarder(): Exit");
-    }
-
-    //
-    // Media Client Service
-    //
-
-
-    @Override
-    public Boolean captureMedia(Media media, boolean synchronous) {
-        Boolean success = logMedia(getProcessingPlant().getSubsystemParticipantName(), media);
-        return(success);
-    }
-
 }

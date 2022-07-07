@@ -21,6 +21,16 @@
  */
 package net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans;
 
+import java.util.ArrayList;
+
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.hl7.fhir.r4.model.Media;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import net.fhirfactory.pegacorn.core.constants.systemwide.PegacornReferenceProperties;
 import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterface;
@@ -28,29 +38,16 @@ import net.fhirfactory.pegacorn.core.model.componentid.TopologyNodeFDN;
 import net.fhirfactory.pegacorn.core.model.topology.endpoints.adapters.HTTPClientAdapter;
 import net.fhirfactory.pegacorn.core.model.topology.endpoints.base.IPCTopologyEndpoint;
 import net.fhirfactory.pegacorn.core.model.topology.endpoints.http.HTTPClientTopologyEndpoint;
-import net.fhirfactory.pegacorn.core.model.topology.endpoints.interact.ExternalSystemIPCAdapter;
-import net.fhirfactory.pegacorn.core.model.topology.endpoints.interact.StandardInteractClientTopologyEndpointPort;
 import net.fhirfactory.pegacorn.core.model.topology.nodes.external.ConnectedExternalSystemTopologyNode;
 import net.fhirfactory.pegacorn.deployment.topology.manager.TopologyIM;
 import net.fhirfactory.pegacorn.hestia.dam.im.common.HestiaIMNames;
 import net.fhirfactory.pegacorn.hestia.dam.im.processingplant.configuration.HestiaMediaIMTopologyFactory;
 import net.fhirfactory.pegacorn.petasos.core.moa.wup.MessageBasedWUPEndpointContainer;
 import net.fhirfactory.pegacorn.platform.edge.ask.base.http.InternalFHIRClientProxy;
-import org.apache.commons.lang3.exception.ExceptionUtils;
-import org.hl7.fhir.r4.model.Media;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import java.util.ArrayList;
 
 @ApplicationScoped
 public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
     private static final Logger LOG = LoggerFactory.getLogger(HestiaDMHTTPClient.class);
-
-    private boolean resolvedMediaPersistenceValue;
-    private boolean mediaPersistence;
 
     @Inject
     HestiaMediaIMTopologyFactory topologyFactory;
@@ -74,8 +71,6 @@ public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
 
     public HestiaDMHTTPClient(){
         super();
-        resolvedMediaPersistenceValue = false;
-        mediaPersistence = false;
         getLogger().info(".HestiaDMHTTPClient(): Starting");
     }
 
@@ -126,49 +121,18 @@ public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
         getLogger().error(".getTopologyEndpoint(): Exit, Could not find node for topologyEndpointName->{}", topologyEndpointName);
         return(null);
     }
-
+    
+    //XXX is this method needed?
     public MethodOutcome writeMedia(String mediaJSONString){
         getLogger().debug(".writeMedia(): Entry, mediaJSONString->{}", mediaJSONString);
         MethodOutcome outcome = null;
         try {
-            if (persistMedia()) {
                 getLogger().debug(".writeMedia(): Writing to Hestia-Media-DM");
                 // write the media to the Persistence service
                 Media media = getFHIRContextUtility().getJsonParser().parseResource(Media.class, mediaJSONString);
                 outcome = writeMedia(media);
-            } else {
-                getLogger().info(mediaJSONString);
-                outcome = new MethodOutcome();
-                outcome.setCreated(true);
-            }
         } catch(Exception ex){
             getLogger().warn(".writeMedia(): Could not write Media, message->{}", ExceptionUtils.getMessage(ex));
-            outcome = new MethodOutcome();
-            outcome.setCreated(false);
-        }
-        getLogger().info(".writeMedia(): Exit, outcome->{}", outcome);
-        return(outcome);
-    }
-
-    public MethodOutcome writeMedia(Media media){
-        getLogger().debug(".writeMedia(): Entry, media->{}", media);
-        MethodOutcome outcome = null;
-        try {
-            if (persistMedia()) {
-                getLogger().debug(".writeMedia(): MEDIA_PERSISTENCE is true, writing to actual DM");
-                outcome = getClient().create()
-                        .resource(media)
-                        .prettyPrint()
-                        .encodedJson()
-                        .execute();
-            } else {
-                getLogger().debug(".writeMedia(): MEDIA_PERSISTENCE is false, merely printing media to log file");
-                getLogger().warn("Media->{}", getFHIRContextUtility().getJsonParser().encodeResourceToString(media));
-                outcome = new MethodOutcome();
-                outcome.setCreated(true);
-            }
-        } catch (Exception ex){
-            getLogger().error(".writeMedia(): ", ex);
             outcome = new MethodOutcome();
             outcome.setCreated(false);
         }
@@ -176,17 +140,24 @@ public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
         return(outcome);
     }
 
-    private boolean persistMedia(){
-        if(!this.resolvedMediaPersistenceValue){
-            String mediaPersistenceValue = processingPlant.getMeAsASoftwareComponent().getOtherConfigurationParameter("MEDIA_PERSISTENCE");
-            if (mediaPersistenceValue.equalsIgnoreCase("true")) {
-                this.mediaPersistence = true;
-            } else {
-                this.mediaPersistence = false;
-            }
-            this.resolvedMediaPersistenceValue = true;
+    public MethodOutcome writeMedia(Media media){
+        getLogger().debug(".writeMedia(): Entry, media->{}", media);
+        MethodOutcome outcome = null;
+        try {
+            getLogger().debug(".writeMedia(): client: ->{}", getClient().getClass());
+            outcome = getClient().create()
+                    .resource(media)
+                    .prettyPrint()
+                    .encodedJson()
+                    .execute();
+
+        } catch (Exception ex) {
+            getLogger().error(".writeMedia(): ", ex);
+            outcome = new MethodOutcome();
+            outcome.setCreated(false);
         }
-        return(this.mediaPersistence);
+        getLogger().debug(".writeMedia(): Exit, outcome->{}", outcome);
+        return(outcome);
     }
 
     @Override

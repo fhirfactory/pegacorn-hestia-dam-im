@@ -21,8 +21,17 @@
  */
 package net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientWriterInterface;
+
 import net.fhirfactory.pegacorn.core.interfaces.capabilities.CapabilityFulfillmentInterface;
 import net.fhirfactory.pegacorn.core.interfaces.topology.WorkshopInterface;
 import net.fhirfactory.pegacorn.core.model.dataparcel.DataParcelManifest;
@@ -35,13 +44,6 @@ import net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.Uo
 import net.fhirfactory.pegacorn.petasos.core.moa.wup.MessageBasedWUPEndpointContainer;
 import net.fhirfactory.pegacorn.workshops.EdgeWorkshop;
 import net.fhirfactory.pegacorn.wups.archetypes.petasosenabled.messageprocessingbased.InteractEgressMessagingGatewayWUP;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import java.util.ArrayList;
-import java.util.List;
 
 @ApplicationScoped
 public class MediaAskServiceWUP extends InteractEgressMessagingGatewayWUP {
@@ -70,9 +72,6 @@ public class MediaAskServiceWUP extends InteractEgressMessagingGatewayWUP {
 
     @Inject
     private HestiaIMNames hestiaIMNames;
-
-    @Inject
-    private PetasosMediaServiceClientWriterInterface mediaWriter;
 
     @Inject
     private CapabilityFulfillmentInterface capabilityFulfillmentInterface;

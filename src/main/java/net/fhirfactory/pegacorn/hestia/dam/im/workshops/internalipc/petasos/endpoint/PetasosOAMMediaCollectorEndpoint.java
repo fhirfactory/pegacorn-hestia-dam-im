@@ -21,38 +21,33 @@
  */
 package net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.petasos.endpoint;
 
+import java.time.Instant;
+import java.util.List;
+
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+
+import org.hl7.fhir.r4.model.Media;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import ca.uhn.fhir.rest.api.MethodOutcome;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientWriterInterface;
-import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceHandlerInterface;
 import net.fhirfactory.pegacorn.core.interfaces.capabilities.CapabilityFulfillmentInterface;
 import net.fhirfactory.pegacorn.core.interfaces.capabilities.CapabilityProviderNameServiceInterface;
-import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterface;
+import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientWriterInterface;
+import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceHandlerInterface;
 import net.fhirfactory.pegacorn.core.model.capabilities.base.CapabilityUtilisationRequest;
 import net.fhirfactory.pegacorn.core.model.capabilities.base.CapabilityUtilisationResponse;
 import net.fhirfactory.pegacorn.core.model.capabilities.base.factories.MethodOutcomeFactory;
 import net.fhirfactory.pegacorn.core.model.capabilities.valuesets.WorkUnitProcessorCapabilityEnum;
 import net.fhirfactory.pegacorn.core.model.topology.endpoints.edge.jgroups.JGroupsIntegrationPointSummary;
-import net.fhirfactory.pegacorn.core.model.topology.role.ProcessingPlantRoleEnum;
 import net.fhirfactory.pegacorn.core.model.transaction.factories.PegacornTransactionMethodOutcomeFactory;
-import net.fhirfactory.pegacorn.core.model.transaction.model.PegacornTransactionMethodOutcome;
 import net.fhirfactory.pegacorn.core.model.transaction.model.PegacornTransactionOutcome;
 import net.fhirfactory.pegacorn.core.model.transaction.model.SimpleResourceID;
 import net.fhirfactory.pegacorn.core.model.transaction.valuesets.PegacornTransactionStatusEnum;
 import net.fhirfactory.pegacorn.core.model.transaction.valuesets.PegacornTransactionTypeEnum;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.datagrid.AsynchronousWriterMediaCache;
 import net.fhirfactory.pegacorn.petasos.endpoints.services.media.PetasosMediaServicesEndpoint;
-import net.fhirfactory.pegacorn.util.FHIRContextUtility;
-import org.hl7.fhir.r4.model.Media;
-import org.hl7.fhir.r4.model.IdType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import java.time.Instant;
-import java.util.List;
-import java.util.UUID;
 
 @ApplicationScoped
 public class PetasosOAMMediaCollectorEndpoint extends PetasosMediaServicesEndpoint

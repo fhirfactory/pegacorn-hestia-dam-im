@@ -9,8 +9,9 @@ import org.junit.jupiter.api.Test;
 
 import org.hl7.fhir.r4.model.Media;
 
-class PetasosMediaPersistenceServiceTest {
+public class PetasosMediaPersistenceServiceTest {
 
+	
 	@Test
 	void generateFilename() {
 		PetasosMediaPersistenceService service = new PetasosMediaPersistenceService();

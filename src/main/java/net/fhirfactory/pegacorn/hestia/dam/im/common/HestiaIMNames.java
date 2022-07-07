@@ -26,7 +26,13 @@ import javax.enterprise.context.ApplicationScoped;
 @ApplicationScoped
 public class HestiaIMNames {
 
+	//HAPI JPA server
     public String getInteractHestiaDMHTTPClientName(){
         return("hestia-dm-http");
+    }
+    
+    //Hesia DAM DM
+    public String getInteractHestiaDAMFileShareEndpointName(){
+        return("hestia-dam-fileshare");
     }
 }

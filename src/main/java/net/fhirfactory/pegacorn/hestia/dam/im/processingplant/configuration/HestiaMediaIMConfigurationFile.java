@@ -23,7 +23,6 @@ package net.fhirfactory.pegacorn.hestia.dam.im.processingplant.configuration;
 
 import net.fhirfactory.pegacorn.deployment.properties.configurationfilebased.common.archetypes.PetasosEnabledSubsystemPropertyFile;
 import net.fhirfactory.pegacorn.deployment.properties.configurationfilebased.common.segments.ports.http.HTTPClientPortSegment;
-import net.fhirfactory.pegacorn.deployment.properties.configurationfilebased.common.segments.ports.interact.InteractClientPortSegment;
 
 public class HestiaMediaIMConfigurationFile extends PetasosEnabledSubsystemPropertyFile {
 
