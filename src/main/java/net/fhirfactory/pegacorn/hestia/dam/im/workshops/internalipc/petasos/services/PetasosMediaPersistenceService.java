@@ -52,7 +52,7 @@ import net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.He
 import net.fhirfactory.pegacorn.internals.fhir.r4.resources.media.factories.MediaEncryptionExtensionFactory;
 
 @ApplicationScoped
-public class PetasosMediaPersistenceService implements PetasosMediaServiceClientWriterInterface {
+public class PetasosMediaPersistenceService implements PetasosMediaServiceClientWriterInterface, PetasosMediaServiceAgentInterface {
     private static final Logger LOG = LoggerFactory.getLogger(PetasosMediaPersistenceService.class);
 
     private ObjectMapper jsonMapper;
@@ -212,8 +212,25 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     	sb.append("/");
     	sb.append(c.get(Calendar.DATE));
     	sb.append("/");
-    	sb.append(media.getId());  	//XXX KS reconsider file name
+    	sb.append(media.getIdentifierFirstRep().getId());  	//XXX KS reconsider file name
     	sb.append(".data"); 		//XXX KS reconsider extension
     	return sb.toString();
     }
+
+	@Override
+	public Boolean captureMedia(Media media, boolean synchronous) {
+        getLogger().debug(".captureMedia(): Entry, captureMedia->{}", media);
+        MethodOutcome outcome;
+        if(synchronous) {
+        	outcome = writeMediaSynchronously(media);
+        } else {
+        	outcome = writeMediaAsynchronously(media);
+        }
+        Boolean success = false;
+        if(outcome != null){
+            success = outcome.getCreated();
+        }
+        getLogger().debug(".captureMedia(): Exit, success->{}", success);
+        return(success);
+	}
 }
