@@ -23,15 +23,13 @@ package net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.petasos.ser
 
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.apache.commons.lang3.StringUtils;
 import org.hl7.fhir.r4.model.Attachment;
 import org.hl7.fhir.r4.model.Media;
 import org.slf4j.Logger;
@@ -42,11 +40,9 @@ import com.google.common.annotations.VisibleForTesting;
 
 import ca.uhn.fhir.rest.api.MethodOutcome;
 import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceAgentInterface;
-import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceBrokerInterface;
 import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientWriterInterface;
 import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterface;
 import net.fhirfactory.pegacorn.hestia.dam.im.cipher.EncryptedByteArrayStorage;
-import net.fhirfactory.pegacorn.hestia.dam.im.cipher.FileEncrypterDecrypter;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.datagrid.AsynchronousWriterMediaCache;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.HestiaDMHTTPClient;
 import net.fhirfactory.pegacorn.internals.fhir.r4.resources.media.factories.MediaEncryptionExtensionFactory;
@@ -232,5 +228,19 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
         }
         getLogger().debug(".captureMedia(): Exit, success->{}", success);
         return(success);
+	}
+
+	@Override
+	public Media loadMedia(String mediaId) {
+		getLogger().debug(".loadMedia() entry mediaId->{}", mediaId);
+
+		if(StringUtils.isEmpty(mediaId)) {
+			return (null);
+		}
+		//Load media object from JPA server
+		Media media = getHestiaDMHTTPClient().readMedia(mediaId);
+		//
+		getLogger().debug(".loadMedia() exit media->{}", media);
+		return readMedia(media);
 	}
 }

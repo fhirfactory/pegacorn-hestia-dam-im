@@ -159,6 +159,13 @@ public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
         getLogger().debug(".writeMedia(): Exit, outcome->{}", outcome);
         return(outcome);
     }
+    
+    public Media readMedia(String mediaId) {
+        getLogger().debug(".readMedia(): Entry, mediaId->{}", mediaId);
+        Media media = getClient().read().resource(Media.class).withId(mediaId).execute();
+        getLogger().debug(".readMedia(): Exit, media->{}", media);
+    	return media;
+    }
 
     @Override
     protected void postConstructActivities() {
