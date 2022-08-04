@@ -208,7 +208,7 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     	sb.append("/");
     	sb.append(c.get(Calendar.DATE));
     	sb.append("/");
-    	sb.append(media.getIdentifierFirstRep().getId());  	//XXX KS reconsider file name
+    	sb.append(media.getIdentifierFirstRep().getValue());  	//XXX KS reconsider file name
     	sb.append(".data"); 		//XXX KS reconsider extension
     	return sb.toString();
     }
