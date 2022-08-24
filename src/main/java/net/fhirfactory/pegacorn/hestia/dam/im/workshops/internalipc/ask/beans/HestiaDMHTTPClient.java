@@ -121,24 +121,6 @@ public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
         getLogger().error(".getTopologyEndpoint(): Exit, Could not find node for topologyEndpointName->{}", topologyEndpointName);
         return(null);
     }
-    
-    //XXX is this method needed?
-    public MethodOutcome writeMedia(String mediaJSONString){
-        getLogger().debug(".writeMedia(): Entry, mediaJSONString->{}", mediaJSONString);
-        MethodOutcome outcome = null;
-        try {
-                getLogger().debug(".writeMedia(): Writing to Hestia-Media-DM");
-                // write the media to the Persistence service
-                Media media = getFHIRContextUtility().getJsonParser().parseResource(Media.class, mediaJSONString);
-                outcome = writeMedia(media);
-        } catch(Exception ex){
-            getLogger().warn(".writeMedia(): Could not write Media, message->{}", ExceptionUtils.getMessage(ex));
-            outcome = new MethodOutcome();
-            outcome.setCreated(false);
-        }
-        getLogger().debug(".writeMedia(): Exit, outcome->{}", outcome);
-        return(outcome);
-    }
 
     public MethodOutcome writeMedia(Media media){
         getLogger().debug(".writeMedia(): Entry, media->{}", media);
@@ -150,13 +132,13 @@ public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
                     .prettyPrint()
                     .encodedJson()
                     .execute();
-
+            getLogger().debug(".writeMedia(): getClient().create() outcome returned: ->{}", outcome.getCreated());
         } catch (Exception ex) {
             getLogger().error(".writeMedia(): ", ex);
             outcome = new MethodOutcome();
             outcome.setCreated(false);
         }
-        getLogger().debug(".writeMedia(): Exit, outcome->{}", outcome);
+        getLogger().debug(".writeMedia(): Exit, outcome.created->{}", outcome.getCreated());
         return(outcome);
     }
     

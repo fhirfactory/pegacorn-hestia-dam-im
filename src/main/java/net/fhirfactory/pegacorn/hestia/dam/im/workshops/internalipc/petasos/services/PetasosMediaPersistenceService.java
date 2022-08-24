@@ -43,7 +43,6 @@ import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceAgentIn
 import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientWriterInterface;
 import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterface;
 import net.fhirfactory.pegacorn.hestia.dam.im.cipher.EncryptedByteArrayStorage;
-import net.fhirfactory.pegacorn.hestia.dam.im.workshops.datagrid.AsynchronousWriterMediaCache;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.HestiaDMHTTPClient;
 import net.fhirfactory.pegacorn.internals.fhir.r4.resources.media.factories.MediaEncryptionExtensionFactory;
 
@@ -59,9 +58,6 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
 
     @Inject
     private HestiaDMHTTPClient hestiaDMHTTPClient;
-
-    @Inject
-    private AsynchronousWriterMediaCache mediaCache;
     
     @Inject
     MediaEncryptionExtensionFactory encryptionExtension;
@@ -98,9 +94,6 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
         return (hestiaDMHTTPClient);
     }
 
-    protected AsynchronousWriterMediaCache getMediaCache(){
-        return(mediaCache);
-    }
 
     protected Object getWriterLock(){
         return(writerLock);
@@ -110,21 +103,7 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     // Global Media Services
     //
 
-    @Override
-    public MethodOutcome writeMediaAsynchronously(Media media) {
-        getLogger().debug(".writeMediaAsynchronously(): Entry, media->{}", media);
-        MethodOutcome outcome = writeMedia(media);
-        getLogger().debug(".writeMediaAsynchronously(): Exit, outcome->{}", outcome);
-        return(outcome);
-    }
-
-    @Override
-    public MethodOutcome writeMediaSynchronously(Media media) {
-        getLogger().debug(".writeMediaSynchronously(): Entry, media->{}", media);
-        MethodOutcome outcome = writeMedia(media);
-        getLogger().debug(".writeMediaSynchronously(): Exit, outcome->{}", outcome);
-        return(outcome);
-    }
+   
 
     //
     // Actual Writing Invocation Function
@@ -151,8 +130,11 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
 
             //	 b) write the modified media to the JPA server
 	            synchronized (getWriterLock()) {
-//	                getLogger().warn(".writeMedia(): Got Writing Semaphore, writing!");
+	                getLogger().debug(".writeMedia(): Got Writing Semaphore, writing!");
 	                outcome = getHestiaDMHTTPClient().writeMedia(media);
+	                if(!outcome.getCreated()) {
+	                    getLogger().warn(".writeMedia(): Failed to save Media to DB!");
+	                }
 	            }
             }
         } else {
@@ -167,6 +149,7 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
 		getLogger().debug(".readMedia() entry media->{}", media);
 		if(media == null || media.getContent() == null || !media.getContent().hasExtension()) {
 			getLogger().warn("readMedia() failed to read media because of insufficient data passed to method. media->{}", media);
+			return null;
 		}
 		SecretKey key = encryptionExtension.extractSecretKey(media.getContent());
 		String fileName = media.getContent().getUrl();
@@ -174,6 +157,7 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
 		byte[] data = storageInterface.loadAndDecrypt(key, fileName);
 		if(data == null) {
 			getLogger().warn(".readMedia() failed to retrieve data.");
+			return null;
 		} else {
 			media.getContent().setData(data);
 		}
@@ -214,14 +198,9 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     }
 
 	@Override
-	public Boolean captureMedia(Media media, boolean synchronous) {
+	public Boolean captureMedia(Media media) {
         getLogger().debug(".captureMedia(): Entry, captureMedia->{}", media);
-        MethodOutcome outcome;
-        if(synchronous) {
-        	outcome = writeMediaSynchronously(media);
-        } else {
-        	outcome = writeMediaAsynchronously(media);
-        }
+        MethodOutcome outcome = writeMedia(media);
         Boolean success = false;
         if(outcome != null){
             success = outcome.getCreated();

@@ -59,7 +59,8 @@ public class FileEncrypterDecrypter implements EncryptedByteArrayStorage {
 
 	@Override
 	public MethodOutcome encryptAndSave(SecretKey secretKey, String fileName, byte[] content) {
-		
+		getLogger().debug(".encryptAndSave() entry: fileName ->{} content ->{}", fileName, content);
+
 		MethodOutcome outcome = null;
 		try {
 			cipher.init(Cipher.ENCRYPT_MODE, secretKey);
@@ -77,7 +78,7 @@ public class FileEncrypterDecrypter implements EncryptedByteArrayStorage {
 				outcome.setCreated(true);
 				cipherOut.close();
 			} else {
-				getLogger().debug("File not unique! ->{}, ", fileName);
+				getLogger().warn("File not unique! ->{}, ", fileName);
 				outcome = new MethodOutcome();
 				outcome.setCreated(false);
 			}
@@ -87,6 +88,8 @@ public class FileEncrypterDecrypter implements EncryptedByteArrayStorage {
 			outcome = new MethodOutcome();
 			outcome.setCreated(false);
 		}
+		getLogger().debug(".encryptAndSave() exit: outcome.getCreated -> {}", outcome.getCreated());
+
 		return outcome;
 	}
 	

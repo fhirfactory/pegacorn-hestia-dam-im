@@ -22,7 +22,6 @@
 package net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.petasos.endpoint;
 
 import java.time.Instant;
-import java.util.List;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -46,7 +45,6 @@ import net.fhirfactory.pegacorn.core.model.transaction.model.PegacornTransaction
 import net.fhirfactory.pegacorn.core.model.transaction.model.SimpleResourceID;
 import net.fhirfactory.pegacorn.core.model.transaction.valuesets.PegacornTransactionStatusEnum;
 import net.fhirfactory.pegacorn.core.model.transaction.valuesets.PegacornTransactionTypeEnum;
-import net.fhirfactory.pegacorn.hestia.dam.im.workshops.datagrid.AsynchronousWriterMediaCache;
 import net.fhirfactory.pegacorn.petasos.endpoints.services.media.PetasosMediaServicesEndpoint;
 
 @ApplicationScoped
@@ -59,9 +57,6 @@ public class PetasosOAMMediaCollectorEndpoint extends PetasosMediaServicesEndpoi
 
     @Inject
     private PegacornTransactionMethodOutcomeFactory outcomeFactory;
-
-    @Inject
-    private AsynchronousWriterMediaCache mediaCache;
 
     @Inject
     private MethodOutcomeFactory methodOutcomeFactory;
@@ -100,12 +95,12 @@ public class PetasosOAMMediaCollectorEndpoint extends PetasosMediaServicesEndpoi
     //
 
     @Override
-    public Boolean logMediaHandler(Media media, JGroupsIntegrationPointSummary sourceJGroupsIP){
+    public Boolean saveMediaHandler(Media media, JGroupsIntegrationPointSummary sourceJGroupsIP){
         getLogger().debug(".logMediaHandler(): Entry, media->{}, sourceJGroupsIP->{}", media, sourceJGroupsIP);
         MethodOutcome outcome = null;
         if((media != null)) {
             getLogger().debug(".logMediaHandler(): Media is not -null-, writing it to the DM");
-            outcome = mediaWriter.writeMediaSynchronously(media);
+            outcome = mediaWriter.writeMedia(media);
         }
         Boolean success = false;
         if(outcome != null){
@@ -115,36 +110,6 @@ public class PetasosOAMMediaCollectorEndpoint extends PetasosMediaServicesEndpoi
         }
         getMetricsAgent().incrementRemoteProcedureCallHandledCount();
         getLogger().debug(".logMediaHandler(): Exit, success->{}", success);
-        return(success);
-    }
-
-    @Override
-    public Boolean logMediaAsynchronouslyHandler(Media media, JGroupsIntegrationPointSummary jgroupsIP) {
-        getLogger().debug(".logMediaAsynchronouslyHandler(): Entry, media->{}, sourceJGroupsIP->{}", media, jgroupsIP);
-        Boolean success = false;
-        if(media != null) {
-            getLogger().debug(".logMediaAsynchronouslyHandler(): Media is not -null-, adding it to queue");
-            mediaCache.addMedia(media);
-            success = true;
-        }
-        getMetricsAgent().incrementRemoteProcedureCallHandledCount();
-        getLogger().debug(".logMediaAsynchronouslyHandler(): Exit, success->{}", success);
-        return(success);
-    }
-
-    @Override
-    public Boolean logMultipleMediaHandler(List<Media> mediaList, JGroupsIntegrationPointSummary jgroupsIP){
-        getLogger().debug(".logMultipleMediaHandler(): Entry, eMediaList->{}, jgroupsIP->{}", mediaList, jgroupsIP);
-        Boolean success = false;
-        if(mediaList != null) {
-            getLogger().debug(".logMultipleMediaHandler(): MediaList is not -null-, adding entries to queue");
-            for (Media currentMedia : mediaList) {
-                mediaCache.addMedia(currentMedia);
-            }
-        }
-        success = true;
-        getMetricsAgent().incrementRemoteProcedureCallHandledCount();
-        getLogger().debug(".logMultipleMediaHandler(): Exit, success->{}", success);
         return(success);
     }
 
@@ -161,7 +126,7 @@ public class PetasosOAMMediaCollectorEndpoint extends PetasosMediaServicesEndpoi
         MethodOutcome methodOutcome = null;
         try {
             Media media = getFHIRJSONParser().parseResource(Media.class, mediaAsString);
-            methodOutcome = mediaWriter.writeMediaSynchronously(media);
+            methodOutcome = mediaWriter.writeMedia(media);
         } catch (Exception ex){
             methodOutcome = new MethodOutcome();
             methodOutcome.setCreated(false);
