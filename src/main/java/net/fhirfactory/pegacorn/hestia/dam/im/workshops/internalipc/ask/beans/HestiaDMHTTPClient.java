@@ -44,6 +44,7 @@ import net.fhirfactory.pegacorn.hestia.dam.im.common.HestiaIMNames;
 import net.fhirfactory.pegacorn.hestia.dam.im.processingplant.configuration.HestiaMediaIMTopologyFactory;
 import net.fhirfactory.pegacorn.petasos.core.moa.wup.MessageBasedWUPEndpointContainer;
 import net.fhirfactory.pegacorn.platform.edge.ask.base.http.InternalFHIRClientProxy;
+import net.fhirfactory.pegacorn.util.FHIRContextUtility;
 
 @ApplicationScoped
 public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
@@ -68,6 +69,10 @@ public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
 
     @Inject
     private ProcessingPlantInterface processingPlant;
+    
+    @Inject
+    FHIRContextUtility contextUtility;
+
 
     public HestiaDMHTTPClient(){
         super();
@@ -123,7 +128,7 @@ public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
     }
 
     public MethodOutcome writeMedia(Media media){
-        getLogger().debug(".writeMedia(): Entry, media->{}", media);
+        getLogger().debug(".writeMedia(): Entry, media->{}", contextUtility.getJsonParser().encodeResourceToString(media));
         MethodOutcome outcome = null;
         try {
             getLogger().debug(".writeMedia(): client: ->{}", getClient().getClass());
@@ -132,6 +137,7 @@ public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
                     .prettyPrint()
                     .encodedJson()
                     .execute();
+        	LOG.trace("Media after save ->{}", contextUtility.getJsonParser().encodeResourceToString(media));
             getLogger().debug(".writeMedia(): getClient().create() outcome returned: ->{}", outcome.getCreated());
         } catch (Exception ex) {
             getLogger().error(".writeMedia(): ", ex);

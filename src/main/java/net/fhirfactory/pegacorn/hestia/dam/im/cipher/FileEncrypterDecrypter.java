@@ -22,6 +22,8 @@ import org.slf4j.LoggerFactory;
 
 import ca.uhn.fhir.rest.api.MethodOutcome;
 
+
+//TODO remove this class from IM and wire up IM to DM in yaml
 @ApplicationScoped
 public class FileEncrypterDecrypter implements EncryptedByteArrayStorage {
 	

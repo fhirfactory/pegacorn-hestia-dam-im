@@ -45,6 +45,7 @@ import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterfac
 import net.fhirfactory.pegacorn.hestia.dam.im.cipher.EncryptedByteArrayStorage;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.HestiaDMHTTPClient;
 import net.fhirfactory.pegacorn.internals.fhir.r4.resources.media.factories.MediaEncryptionExtensionFactory;
+import net.fhirfactory.pegacorn.util.FHIRContextUtility;
 
 @ApplicationScoped
 public class PetasosMediaPersistenceService implements PetasosMediaServiceClientWriterInterface, PetasosMediaServiceAgentInterface {
@@ -64,6 +65,9 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     
     @Inject
     EncryptedByteArrayStorage storageInterface;
+    
+    @Inject
+    FHIRContextUtility contextUtility;
 
     //
     // Constructor(s)
@@ -128,19 +132,22 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
             	a.setData(null);
             	encryptionExtension.injectSecretKey(a, key);
 
+            	LOG.trace("Media before save ->{}", contextUtility.getJsonParser().encodeResourceToString(media));
             //	 b) write the modified media to the JPA server
 	            synchronized (getWriterLock()) {
 	                getLogger().debug(".writeMedia(): Got Writing Semaphore, writing!");
 	                outcome = getHestiaDMHTTPClient().writeMedia(media);
 	                if(!outcome.getCreated()) {
 	                    getLogger().warn(".writeMedia(): Failed to save Media to DB!");
+	                } else {
+	                	LOG.trace("Media after save ->{}", contextUtility.getJsonParser().encodeResourceToString(media));
 	                }
 	            }
             }
         } else {
             getLogger().warn(".writeMedia(): Media isn't properly formed, not writing!");
         }
-        getLogger().debug(".writeMedia(): Exit, media->{}", media);
+        getLogger().debug(".writeMedia(): Exit, media->{}", media.toString());
         return (outcome);
     }
     
@@ -184,7 +191,6 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     	Calendar c = Calendar.getInstance();
     	StringBuilder sb = new StringBuilder();
     	//Set the folder structure based on year month and day
-    	//XXX KS change this to use the created date on the media object maybe?
     	sb.append("/");
     	sb.append(c.get(Calendar.YEAR));
     	sb.append("/");
@@ -192,7 +198,7 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     	sb.append("/");
     	sb.append(c.get(Calendar.DATE));
     	sb.append("/");
-    	sb.append(media.getIdentifierFirstRep().getValue());  	//XXX KS reconsider file name
+    	sb.append(media.getId());
     	sb.append(".data"); 		//XXX KS reconsider extension
     	return sb.toString();
     }
