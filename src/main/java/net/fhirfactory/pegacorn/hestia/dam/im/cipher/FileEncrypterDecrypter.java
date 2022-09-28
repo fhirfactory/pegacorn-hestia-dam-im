@@ -2,11 +2,9 @@ package net.fhirfactory.pegacorn.hestia.dam.im.cipher;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
+import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 
 import javax.crypto.Cipher;
@@ -62,7 +60,7 @@ public class FileEncrypterDecrypter implements EncryptedByteArrayStorage {
 	@Override
 	public MethodOutcome encryptAndSave(SecretKey secretKey, String fileName, byte[] content) {
 		getLogger().debug(".encryptAndSave() entry: fileName ->{} content ->{}", fileName, content);
-
+		
 		MethodOutcome outcome = null;
 		try {
 			cipher.init(Cipher.ENCRYPT_MODE, secretKey);
@@ -96,7 +94,7 @@ public class FileEncrypterDecrypter implements EncryptedByteArrayStorage {
 	}
 	
 	@Override
-	public byte[] loadAndDecrypt(SecretKey key, String fileName) {
+	public byte[] loadAndDecrypt(SecretKey key, String fileName) throws GeneralSecurityException, IOException {
 		getLogger().debug(".loadAndDecrypt() key ->{} fileName -> ", key.getEncoded(), fileName);
 		byte[] content;
 
@@ -105,28 +103,11 @@ public class FileEncrypterDecrypter implements EncryptedByteArrayStorage {
             fileIn.read(fileIv);
             cipher.init(Cipher.DECRYPT_MODE, key, new IvParameterSpec(fileIv));
 
-            try (
-                    CipherInputStream cipherIn = new CipherInputStream(fileIn, cipher)
-                ) {
+            try (CipherInputStream cipherIn = new CipherInputStream(fileIn, cipher)) {
             	content = cipherIn.readAllBytes();
             }
 
             return content;
-
-        } catch (InvalidKeyException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InvalidAlgorithmParameterException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (FileNotFoundException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-        return null;
+        }
 	}
-	
 }

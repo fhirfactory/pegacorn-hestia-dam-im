@@ -21,18 +21,20 @@
  */
 package net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.petasos.endpoint;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import org.hl7.fhir.instance.model.api.IIdType;
 import org.hl7.fhir.r4.model.Media;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ca.uhn.fhir.rest.api.MethodOutcome;
-import net.fhirfactory.pegacorn.core.interfaces.capabilities.CapabilityFulfillmentInterface;
 import net.fhirfactory.pegacorn.core.interfaces.capabilities.CapabilityProviderNameServiceInterface;
+import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceAgentInterface;
 import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientWriterInterface;
 import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceHandlerInterface;
 import net.fhirfactory.pegacorn.core.model.capabilities.base.CapabilityUtilisationRequest;
@@ -49,11 +51,14 @@ import net.fhirfactory.pegacorn.petasos.endpoints.services.media.PetasosMediaSer
 
 @ApplicationScoped
 public class PetasosOAMMediaCollectorEndpoint extends PetasosMediaServicesEndpoint
-        implements  PetasosMediaServiceHandlerInterface, CapabilityFulfillmentInterface {
+        implements  PetasosMediaServiceHandlerInterface {
     private static final Logger LOG = LoggerFactory.getLogger(PetasosOAMMediaCollectorEndpoint.class);
 
     @Inject
     private PetasosMediaServiceClientWriterInterface mediaWriter;
+    
+    @Inject
+    private PetasosMediaServiceAgentInterface mediaReader;
 
     @Inject
     private PegacornTransactionMethodOutcomeFactory outcomeFactory;
@@ -95,22 +100,34 @@ public class PetasosOAMMediaCollectorEndpoint extends PetasosMediaServicesEndpoi
     //
 
     @Override
-    public Boolean saveMediaHandler(Media media, JGroupsIntegrationPointSummary sourceJGroupsIP){
-        getLogger().debug(".logMediaHandler(): Entry, media->{}, sourceJGroupsIP->{}", media, sourceJGroupsIP);
+    public String saveMediaHandler(Media media, JGroupsIntegrationPointSummary sourceJGroupsIP){
+        getLogger().debug(".saveMediaHandler(): Entry, media->{}, sourceJGroupsIP->{}", media, sourceJGroupsIP);
         MethodOutcome outcome = null;
         if((media != null)) {
-            getLogger().debug(".logMediaHandler(): Media is not -null-, writing it to the DM");
+            getLogger().debug(".saveMediaHandler(): Media is not -null-, writing it to the DM");
             outcome = mediaWriter.writeMedia(media);
         }
-        Boolean success = false;
-        if(outcome != null){
-            if(outcome.getCreated()){
-                success = true;
-            }
+        String savedMediaId = null;
+        if (outcome != null && outcome.getId() != null) {
+            savedMediaId = outcome.getId().getIdPart();
         }
         getMetricsAgent().incrementRemoteProcedureCallHandledCount();
-        getLogger().debug(".logMediaHandler(): Exit, success->{}", success);
-        return(success);
+        getLogger().debug(".saveMediaHandler(): Exit, mediaId->{}", savedMediaId);
+        return(savedMediaId);
+    }
+    
+    @Override
+    public Media retrieveMediaHandler(String mediaId, JGroupsIntegrationPointSummary sourceJGroupsIP) {
+        getLogger().debug(".retrieveMediaHandler(): Entry, mediaId->{}, sourceJGroupsIP->{}", mediaId, sourceJGroupsIP);
+        Media media = null;
+        if((mediaId != null)) {
+            getLogger().debug(".retrieveMediaHandler(): MediaId is not -null-, retrieving from the DM");
+            media = mediaReader.loadMedia(mediaId);
+        }
+        
+        getMetricsAgent().incrementRemoteProcedureCallHandledCount();
+        getLogger().debug(".retrieveMediaHandler(): Exit, media->{}", media);
+        return(media);
     }
 
     //

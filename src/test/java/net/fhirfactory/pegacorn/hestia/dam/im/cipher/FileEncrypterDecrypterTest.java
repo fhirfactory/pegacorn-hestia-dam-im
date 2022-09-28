@@ -1,6 +1,8 @@
 package net.fhirfactory.pegacorn.hestia.dam.im.cipher;
 
 import java.io.File;
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 
 import javax.crypto.KeyGenerator;
@@ -32,8 +34,7 @@ class FileEncrypterDecrypterTest {
 				Assertions.assertEquals(content[i], returnedContent[i]);
 			}
 
-		} catch (NoSuchAlgorithmException e1) {
-			// TODO Auto-generated catch block
+		} catch (GeneralSecurityException | IOException e1) {
 			e1.printStackTrace();
 			Assertions.fail(e1);
 		} finally {

@@ -21,6 +21,9 @@
  */
 package net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.petasos.services;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Calendar;
 
@@ -44,6 +47,7 @@ import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceClientW
 import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterface;
 import net.fhirfactory.pegacorn.hestia.dam.im.cipher.EncryptedByteArrayStorage;
 import net.fhirfactory.pegacorn.hestia.dam.im.workshops.internalipc.ask.beans.HestiaDMHTTPClient;
+import net.fhirfactory.pegacorn.internals.fhir.r4.resources.media.factories.MediaEncryptionExtensionException;
 import net.fhirfactory.pegacorn.internals.fhir.r4.resources.media.factories.MediaEncryptionExtensionFactory;
 import net.fhirfactory.pegacorn.util.FHIRContextUtility;
 
@@ -137,12 +141,13 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
 	            synchronized (getWriterLock()) {
 	                getLogger().debug(".writeMedia(): Got Writing Semaphore, writing!");
 	                outcome = getHestiaDMHTTPClient().writeMedia(media);
-	                if(!outcome.getCreated()) {
-	                    getLogger().warn(".writeMedia(): Failed to save Media to DB!");
-	                } else {
-	                	LOG.trace("Media after save ->{}", contextUtility.getJsonParser().encodeResourceToString(media));
-	                }
 	            }
+	            if(!outcome.getCreated()) {
+                    getLogger().warn(".writeMedia(): Failed to save Media to DB!");
+                } else {
+                    media = (Media) outcome.getResource();  // the only change here should just be the ID
+                    getLogger().trace("Media after save ->{}", contextUtility.getJsonParser().encodeResourceToString(media));
+                }
             }
         } else {
             getLogger().warn(".writeMedia(): Media isn't properly formed, not writing!");
@@ -152,24 +157,40 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
     }
     
 
-	public Media readMedia(Media media) {
-		getLogger().debug(".readMedia() entry media->{}", media);
-		if(media == null || media.getContent() == null || !media.getContent().hasExtension()) {
-			getLogger().warn("readMedia() failed to read media because of insufficient data passed to method. media->{}", media);
-			return null;
+	public Media readMedia(Media media) throws MediaPersistenceException {
+		getLogger().debug(".readMedia(): Entry media->{}", media);
+		if (media == null) {
+		    throw new IllegalArgumentException("Cannot read media: no media provided");
 		}
-		SecretKey key = encryptionExtension.extractSecretKey(media.getContent());
+		if (media.getContent() == null) {
+		    throw new MediaPersistenceException("Cannot read media: no content.  media->" + media);
+		}
+		if (!media.getContent().hasExtension()) {
+		    throw new MediaPersistenceException("Cannot read media: no content extension.  media->" + media);
+		}
+		SecretKey key;
+        try {
+            key = encryptionExtension.extractSecretKey(media.getContent());
+        } catch (MediaEncryptionExtensionException e) {
+            throw new MediaPersistenceException("Cannot read media: cannot extract secret key.  media->" + media, e);
+        }
 		String fileName = media.getContent().getUrl();
-		getLogger().debug("attempting to retrieveObject with the following: key ->{}, fileName ->{}", key.getEncoded(), fileName);
-		byte[] data = storageInterface.loadAndDecrypt(key, fileName);
-		if(data == null) {
-			getLogger().warn(".readMedia() failed to retrieve data.");
-			return null;
-		} else {
-			media.getContent().setData(data);
+		if (fileName == null) {
+		    throw new MediaPersistenceException("Cannot read media: no content URL (filename).  media->" + media);
 		}
-		getLogger().debug(".readMedia() exit.");
+		getLogger().debug("attempting to retrieveObject with the following: key ->{}, fileName ->{}", key.getEncoded(), fileName);
+		byte[] data;
+        try {
+            data = storageInterface.loadAndDecrypt(key, fileName);
+        } catch (GeneralSecurityException | IOException e) {
+            throw new MediaPersistenceException("Failed to load and decrypt media", e);
+        }
+		if (data == null) {
+		    throw new MediaPersistenceException("Failed to load and decrypt media: null return");
+		}
+		media.getContent().setData(data);
 
+		getLogger().debug(".readMedia(): Exit");
 		return media;
 	}
 
@@ -226,6 +247,11 @@ public class PetasosMediaPersistenceService implements PetasosMediaServiceClient
 		Media media = getHestiaDMHTTPClient().readMedia(mediaId);
 		//
 		getLogger().debug(".loadMedia() exit media->{}", media);
-		return readMedia(media);
+		try {
+            return readMedia(media);
+        } catch (MediaPersistenceException e) {
+            getLogger().error("Failed to load media: mediaId->" + mediaId, e);
+            return null;
+        }
 	}
 }

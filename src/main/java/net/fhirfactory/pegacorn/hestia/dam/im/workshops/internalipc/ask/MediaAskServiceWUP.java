@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import net.fhirfactory.pegacorn.core.interfaces.capabilities.CapabilityFulfillmentInterface;
+import net.fhirfactory.pegacorn.core.interfaces.media.PetasosMediaServiceHandlerInterface;
 import net.fhirfactory.pegacorn.core.interfaces.topology.WorkshopInterface;
 import net.fhirfactory.pegacorn.core.model.dataparcel.DataParcelManifest;
 import net.fhirfactory.pegacorn.core.model.topology.endpoints.adapters.HTTPClientAdapter;
@@ -74,7 +75,7 @@ public class MediaAskServiceWUP extends InteractEgressMessagingGatewayWUP {
     private HestiaIMNames hestiaIMNames;
 
     @Inject
-    private CapabilityFulfillmentInterface capabilityFulfillmentInterface;
+    private PetasosMediaServiceHandlerInterface mediaServiceHandler;
 
     @Override
     protected List<DataParcelManifest> specifySubscriptionTopics() {
@@ -152,7 +153,7 @@ public class MediaAskServiceWUP extends InteractEgressMessagingGatewayWUP {
 
     @Override
     protected void registerCapabilities(){
-        getProcessingPlant().registerCapabilityFulfillmentService("FHIR-Media-Persistence", capabilityFulfillmentInterface);
+        getProcessingPlant().registerCapabilityFulfillmentService("FHIR-Media-Persistence", mediaServiceHandler);
     }
 
     @Override

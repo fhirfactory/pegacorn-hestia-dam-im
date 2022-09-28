@@ -68,11 +68,18 @@ public class MediaObjectGenerator {
 			} else {
 				getLogger().debug("service is null? " + (service == null));
 				if(service != null) {
-					Media media = service.readMedia(temp);
-					getLogger().debug("data returned: ->{}",media.getContent().getData());
-					getLogger().debug("data equal? ->{}", media.getContent().getData() == temp.getContent().getData());
-					save = true;
-					temp = null;
+				    Media media = null;
+				    try {
+				        media = service.readMedia(temp);
+				    } catch (MediaPersistenceException e) {
+				        getLogger().error(".storeAndRetrieve(): Exit, Failed reading media " + temp, e);
+				    }
+				    if (media != null) {
+    					getLogger().debug("data returned: ->{}",media.getContent().getData());
+    					getLogger().debug("data equal? ->{}", media.getContent().getData() == temp.getContent().getData());
+    					save = true;
+    					temp = null;
+				    }
 				} else {
 					getLogger().debug("service didn't set correctly" + (service == null));
 				}

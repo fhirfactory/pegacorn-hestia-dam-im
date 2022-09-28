@@ -26,12 +26,13 @@ import java.util.ArrayList;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.hl7.fhir.r4.model.Media;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import ca.uhn.fhir.rest.api.MethodOutcome;
+import ca.uhn.fhir.rest.client.api.IGenericClient;
+import ca.uhn.fhir.rest.client.interceptor.LoggingInterceptor;
 import net.fhirfactory.pegacorn.core.constants.systemwide.PegacornReferenceProperties;
 import net.fhirfactory.pegacorn.core.interfaces.topology.ProcessingPlantInterface;
 import net.fhirfactory.pegacorn.core.model.componentid.TopologyNodeFDN;
@@ -117,10 +118,19 @@ public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
         ArrayList<TopologyNodeFDN> endpointFDNs = processingPlant.getMeAsASoftwareComponent().getEndpoints();
         for(TopologyNodeFDN currentEndpointFDN: endpointFDNs){
             IPCTopologyEndpoint endpointTopologyNode = (IPCTopologyEndpoint)topologyIM.getNode(currentEndpointFDN);
-            if(endpointTopologyNode.getEndpointConfigurationName().contentEquals(topologyEndpointName)){
-                HTTPClientTopologyEndpoint clientTopologyEndpoint = (HTTPClientTopologyEndpoint)endpointTopologyNode;
-                getLogger().debug(".getTopologyEndpoint(): Exit, node found -->{}", clientTopologyEndpoint);
-                return(clientTopologyEndpoint);
+            if (endpointTopologyNode != null) {
+                if (endpointTopologyNode.getEndpointConfigurationName() != null) {
+                    if(endpointTopologyNode.getEndpointConfigurationName().contentEquals(topologyEndpointName)){
+                        HTTPClientTopologyEndpoint clientTopologyEndpoint = (HTTPClientTopologyEndpoint)endpointTopologyNode;
+                        getLogger().debug(".getTopologyEndpoint(): Exit, node found -->{}", clientTopologyEndpoint);
+                        return(clientTopologyEndpoint);
+                    }
+                } else {
+                    getLogger().error(".getTopologyEndpoint(): Search for topologyEndpointName->{}: no endpointConfigurationName: endpointTopologyNode->{}", topologyEndpointName, endpointTopologyNode);
+                }
+            } else {
+                //TODO maybe change to warn?
+                getLogger().error(".getTopologyEndpoint(): Search for topologyEndpointName->{}: no endpoint topology node found: endpointFDN->{}", topologyEndpointName, currentEndpointFDN);
             }
         }
         getLogger().error(".getTopologyEndpoint(): Exit, Could not find node for topologyEndpointName->{}", topologyEndpointName);
@@ -129,18 +139,41 @@ public class HestiaDMHTTPClient extends InternalFHIRClientProxy {
 
     public MethodOutcome writeMedia(Media media){
         getLogger().debug(".writeMedia(): Entry, media->{}", contextUtility.getJsonParser().encodeResourceToString(media));
+        IGenericClient hapiClient = null;
         MethodOutcome outcome = null;
         try {
             getLogger().debug(".writeMedia(): client: ->{}", getClient().getClass());
-            outcome = getClient().create()
+            hapiClient = getClient();
+            
+            // temporary interceptor logging code
+            //TODO add in option to use this with some sort of debug flag
+            LoggingInterceptor loggingInterceptor = new LoggingInterceptor();
+            loggingInterceptor.setLogRequestSummary(true);
+            loggingInterceptor.setLogRequestBody(true);
+            loggingInterceptor.setLogRequestHeaders(true);
+            loggingInterceptor.setLogResponseBody(true);
+            loggingInterceptor.setLogResponseHeaders(true);
+            loggingInterceptor.setLogResponseSummary(true);
+            hapiClient.registerInterceptor(loggingInterceptor);
+            
+            outcome = hapiClient.create()
                     .resource(media)
                     .prettyPrint()
                     .encodedJson()
                     .execute();
+            
+            if (outcome.getCreated()) {
+                // sets the Id to the created one.  Note that we use this Id in references rather than an identifier
+                media.setId(outcome.getId());
+            }
         	LOG.trace("Media after save ->{}", contextUtility.getJsonParser().encodeResourceToString(media));
             getLogger().debug(".writeMedia(): getClient().create() outcome returned: ->{}", outcome.getCreated());
         } catch (Exception ex) {
-            getLogger().error(".writeMedia(): ", ex);
+            String mediaDisplay = media.getId();
+            if (media.hasContent()) {
+                mediaDisplay += ": " + media.getContent().getUrl();
+            }
+            getLogger().error(".writeMedia(): media->{}, serverBase->{}, hapiClient->{}: ", mediaDisplay, hapiClient.getServerBase(), hapiClient, ex);
             outcome = new MethodOutcome();
             outcome.setCreated(false);
         }
